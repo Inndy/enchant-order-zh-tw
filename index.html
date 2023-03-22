@@ -2,10 +2,228 @@
 <head>
 <title>Minecraft Enchantment Ordering Tool</title>
 <script src="https://code.jquery.com/jquery-3.6.0.slim.min.js" integrity="sha256-u7e5khyithlIdTpu22PHhENmPcRdFiHRjhAuHcs05RI=" crossorigin="anonymous"></script>
-<script src="data.js?2"></script>
+<script src="data.js"></script>
+<script src="i18n_zh_tw.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<script>
+<meta name="charset" content="utf-8">
 
+<style>
+
+body {
+	font-family: arial;
+}
+
+.inner {
+	margin: 30px auto;
+	width: 1000px;
+	padding-bottom: 30px;
+}
+
+#enchants {
+	width: 400px;
+}
+
+#enchants table {
+	border-spacing: 0px;
+}
+
+#enchants td {
+	padding: 0.5em;
+}
+
+#enchants tr.group1 td {
+	background-color: #eee;
+}
+
+#enchants tr.group2 td {
+	background-color: #ddd;
+}
+
+#enchants td i {
+	font-size: 12px;
+}
+
+#enchants button {
+	background-color: white;
+	padding: 10px;
+	vertical-align: top;
+	box-shadow: 2px 1px 2px gray;
+	margin: 2px 0px 2px 0px;
+}
+
+#enchants button.on {
+	box-shadow: 0 0 0 white;
+	margin: 4px 0px 0px 0px;
+	color: red;
+	background-color: #cfc;
+}
+
+#calculate {
+	padding: 8px;
+	font-size: 120%;
+}
+
+#left {
+	width: 400px;
+	float: left;
+	margin-right: 50px;
+}
+
+#right {
+	width: 550px;
+	float: left;
+}
+
+#progress {
+	margin-top: 40px;
+	line-height: 20px;
+	background-color: #ffc;
+	padding: 20px;
+}
+
+#progress img {
+	vertical-align: middle;
+}
+
+#error {
+	margin-top: 40px;
+	line-height: 20px;
+	background-color: #f99;
+	padding: 20px;
+}
+
+#solution {
+	background-color: #cfc;
+	padding: 20px;
+	margin-top: 20px;
+}
+
+#solution h2 {
+	margin-block-start: 0;
+}
+
+#steps li {
+	margin-bottom: 0.75em;
+}
+
+.footer {
+	position: fixed;
+	right: 0;
+	bottom: 0;
+	width: 100%;
+	background: white;
+
+	padding-right: 20px;
+	box-sizing: border-box;
+	text-align: right;
+}
+
+.icon {
+	display: inline-block;
+	width: 16px;
+	height: 16px;
+}
+
+@media only screen and (max-width: 1000px) {
+	body {
+		padding: 10px;
+	}
+	
+	.inner {
+		width: auto;
+		max-width: 100%;
+		margin-top: 0;
+	}
+	
+	h1 {
+		font-size: 24px;
+	}
+	
+	#left {
+		width: auto;
+		float: none;
+		margin-right: 0;
+	}
+	
+	#right {
+		width: auto;
+		float: none;
+	}
+	#enchants {
+		width: auto;
+	}
+}
+
+</style>
+</head>
+<body>
+
+<div class="inner">
+
+	<h1>Minecraft Enchantment Ordering Tool</h1>
+
+	<p>
+		When enchanting items in Minecraft, the order in which you combine armor, weapons and tools with books in your anvil makes a huge difference.
+		Each time you work on an anvil, you increase the <a href="https://minecraft.fandom.com/wiki/Anvil_mechanics">work penalty</a> for future workings.
+		Once that penalty gets too high, you simply can't add any more enchantments and the anvil says "Too Expensive!".
+		This tool helps you plan the optimal order of combining and applying books, to give you the cheapest possible cost.
+	</p>
+
+	<div id="left">
+
+		<p>
+			<select id="item">
+				<option value="">Choose an item to enchant</option>
+			</select>
+		</p>
+
+		<div id="enchants" style="display: none">
+			<table></table>
+
+			<div id="overrides" style="display: none">
+				<p>
+				</p>
+			</div>
+
+			<p>
+				<button id="calculate"><span class="_t">Calculate</span> &raquo;</button>
+			</p>
+		</div>
+
+	</div>
+
+	<div id="right">
+
+		<div id="progress" style="display: none">
+			<img src="spin.svg" width="20" height="20">
+			<span class="lbl">Text here</span>
+		</div>
+
+		<div id="solution" style="display: none">
+			<h2>Optimal solution found!</h2>
+
+			<p id="timings">Completed in under a second, trying 1,000,000,000 combinations</p>
+			<p><b>Total cost:</b> <span id="level-cost">69</span> levels</p>
+
+			<h3>Steps</h3>
+			<ol id="steps">
+			</ol>
+		</div>
+
+		<div id="error" style="display: none">
+			<span class="lbl">Text here</span>
+		</div>
+
+	</div>
+
+	<br clear="all">
+</div>
+
+<div class="footer">
+	<p>Built by Cal Henderson. <a href="https://github.com/iamcal/enchant-order">Source on Github</a></p>
+</div>
+
+<script>
 var item = "boots";
 var enchants = [
 	["Protection", 4],
@@ -35,74 +253,71 @@ var overrides = [
 	['bow'		, 'bow_1_11'],
 ];
 
-var w;
 var start;
 var in_progress = false;
 var total_steps;
 var total_tries;
 
-window.onload = function(){
+const w = new Worker('work.js');
 
-	w = new Worker('work.js');
+w.onmessage = function(e){
+	var x = performance.now();
+	var elapsed = x - start;
+	console.log(x, 'msg back to master', e.data);
 
-	w.onmessage = function(e){
-		var x = performance.now();
-		var elapsed = x - start;
-		console.log(x, 'msg back to master', e.data);
+	if (e.data.msg == 'stage_complete'){
+		stage_complete(e.data);
+	}
 
-		if (e.data.msg == 'stage_complete'){
-			stage_complete(e.data);
-		}
+	if (e.data.msg == 'complete'){
+		completed(e.data);
+	}
+};
 
-		if (e.data.msg == 'complete'){
-			completed(e.data);
-		}
-	};
+w.postMessage({
+	'msg' : 'set_data',
+	'data' : data,
+});
 
+for (var i in data.items){
+	$('<option/>', { value : i }).text(_t(data.items[i])).appendTo('select#item');
+}
+
+$('select#item').change(function(){
+	var opt = $('select#item option:selected').val();
+	if (opt){
+		build_enchant_list(opt);
+		build_overrides(opt);
+	}else{
+		$('#enchants').hide();
+		$('#overrides').hide();
+	}
+});
+
+$('#enchants table').on('click', 'button', function() {
+	button_clicked($(this));
+});
+
+$('#calculate').click(calculate);
+
+if (0){
+	start = performance.now();
 	w.postMessage({
-		'msg' : 'set_data',
-		'data' : data,
+		'msg' : 'process',
+		'item' : item,
+		'enchants' : enchants,
 	});
+}
 
+if (0){
 	for (var i in data.items){
-		$('<option/>', { value : i }).text(data.items[i]).appendTo('select#item');
-	}
+		var img = $('<img>').attr('src', './images/'+i+'.gif').attr('width', 16).attr('height', 16);
+		var lbl = $('<span>').text(data.items[i]);
 
-	$('select#item').change(function(){
-		var opt = $('select#item option:selected').val();
-		if (opt){
-			build_enchant_list(opt);
-			build_overrides(opt);
-		}else{
-			$('#enchants').hide();
-			$('#overrides').hide();
-		}
-	});
-
-	$('#enchants table').on('click', 'button', function() {
-		button_clicked($(this));
-	});
-
-	$('#calculate').click(calculate);
-
-	if (0){
-		start = performance.now();
-		w.postMessage({
-			'msg' : 'process',
-			'item' : item,
-			'enchants' : enchants,
-		});
-	}
-
-	if (0){
-		for (var i in data.items){
-			var img = $('<img>').attr('src', './images/'+i+'.gif').attr('width', 16).attr('height', 16);
-			var lbl = $('<span>').text(data.items[i]);
-
-			$('#right').append($('<p>').append(img).append(lbl));
-		}
+		$('#right').append($('<p>').append(img).append(lbl));
 	}
 }
+
 
 function build_enchant_list(item){
 
@@ -202,7 +417,7 @@ function build_enchant_list(item){
 			var row = $('<tr>');
 			row.addClass(g_toggle ? 'group1' : 'group2');
 
-			row.append($('<td>').append(enchant));
+			row.append($('<td>').append(_t(enchant)));
 			for (var k=1; k<=max_max; k++){
 				if (max >= k){
 					row.append($('<td>').append($('<button>').append(k).addClass('off').data({
@@ -275,7 +490,7 @@ function build_overrides(item){
 		}
 	}
 
-	$('#overrides p input').change(function(){ build_enchant_list(item); });
+	$('#overrides p input').change(() => build_enchant_list(item));
 
 	$('#overrides').show();
 }
@@ -308,10 +523,16 @@ function completed(msg){
 	$('#steps').html('');
 
 	if (msg.tried == 0){
-		$('#error .lbl').text("Please select one or more enchantments");
+		$('#error .lbl').text(_t("Please select one or more enchantments"));
 		$('#error').show();
 		return;
 	}
+
+	Object.keys(names).forEach(k => {
+		names[k] = names[k].replace(/^(.*?)( \d)?$/, function (m, g1, g2) {
+			return _t(g1) + (g2 || '')
+		})
+	})
 
 	for (var i=0; i<msg.path.length; i++){
 
@@ -319,7 +540,7 @@ function completed(msg){
 		var left = expand_name(msg.path[i][0], names, msg);
 		var right = expand_name(msg.path[i][1], names, msg);
 
-		$('#steps').append($('<li>').html('Combine <i>'+left+'</i> with <i>'+right+'</i>'));
+		$('#steps').append($('<li>').html(`Combine <i>${left}</i> with <i>${right}</i>`));
 
 	}
 
@@ -447,226 +668,7 @@ function number_format(x){
 	return Number(x).toLocaleString();
 }
 
-
-
+Array.from(document.querySelectorAll('._t')).forEach(e => { e.textContent = _t(e.textContent) })
 </script>
-<style>
-
-body {
-	font-family: arial;
-}
-
-.inner {
-	margin: 30px auto;
-	width: 1000px;
-	padding-bottom: 30px;
-}
-
-#enchants {
-	width: 400px;
-}
-
-#enchants table {
-	border-spacing: 0px;
-}
-
-#enchants td {
-	padding: 0.5em;
-}
-
-#enchants tr.group1 td {
-	background-color: #eee;
-}
-
-#enchants tr.group2 td {
-	background-color: #ddd;
-}
-
-#enchants td i {
-	font-size: 12px;
-}
-
-#enchants button {
-	background-color: white;
-	padding: 10px;
-	vertical-align: top;
-	box-shadow: 2px 1px 2px gray;
-	margin: 2px 0px 2px 0px;
-}
-
-#enchants button.on {
-	box-shadow: 0 0 0 white;
-	margin: 4px 0px 0px 0px;
-	color: red;
-	background-color: #cfc;
-}
-
-#calculate {
-	padding: 8px;
-	font-size: 120%;
-}
-
-#left {
-	width: 400px;
-	float: left;
-	margin-right: 50px;
-	xbackground-color: lime;
-}
-
-#right {
-	xbackground-color: pink;
-	width: 550px;
-	float: left;
-}
-
-#progress {
-	margin-top: 40px;
-	line-height: 20px;
-	background-color: #ffc;
-	padding: 20px;
-}
-
-#progress img {
-	vertical-align: middle;
-}
-
-#error {
-	margin-top: 40px;
-	line-height: 20px;
-	background-color: #f99;
-	padding: 20px;
-}
-
-#solution {
-	background-color: #cfc;
-	padding: 20px;
-	margin-top: 20px;
-}
-
-#solution h2 {
-	margin-block-start: 0;
-}
-
-#steps li {
-	margin-bottom: 0.75em;
-}
-
-.footer {
-	position: fixed;
-	right: 0;
-	bottom: 0;
-	width: 100%;
-	background: white;
-
-	padding-right: 20px;
-	box-sizing: border-box;
-	text-align: right;
-}
-
-.icon {
-	display: inline-block;
-	width: 16px;
-	height: 16px;
-}
-
-@media only screen and (max-width: 1000px) {
-	body {
-		padding: 10px;
-	}
-	
-	.inner {
-		width: auto;
-		max-width: 100%;
-		margin-top: 0;
-	}
-	
-	h1 {
-		font-size: 24px;
-	}
-	
-	#left {
-		width: auto;
-		float: none;
-		margin-right: 0;
-	}
-	
-	#right {
-		width: auto;
-		float: none;
-	}
-	#enchants {
-		width: auto;
-	}
-}
-
-</style>
-</head>
-<body>
-
-<div class="inner">
-
-	<h1>Minecraft Enchantment Ordering Tool</h1>
-
-	<p>
-		When enchanting items in Minecraft, the order in which you combine armor, weapons and tools with books in your anvil makes a huge difference.
-		Each time you work on an anvil, you increase the <a href="https://minecraft.fandom.com/wiki/Anvil_mechanics">work penalty</a> for future workings.
-		Once that penalty gets too high, you simply can't add any more enchantments and the anvil says "Too Expensive!".
-		This tool helps you plan the optimal order of combining and applying books, to give you the cheapest possible cost.
-	</p>
-
-	<div id="left">
-
-		<p>
-			<select id="item">
-				<option value="">Choose an item to enchant</option>
-			</select>
-		</p>
-
-		<div id="enchants" style="display: none">
-			<table></table>
-
-			<div id="overrides" style="display: none">
-				<p>
-				</p>
-			</div>
-
-			<p>
-				<button id="calculate">Calculate &raquo;</button>
-			</p>
-		</div>
-
-	</div>
-
-	<div id="right">
-
-		<div id="progress" style="display: none">
-			<img src="spin.svg" width="20" height="20">
-			<span class="lbl">Text here</span>
-		</div>
-
-		<div id="solution" style="display: none">
-			<h2>Optimal solution found!</h2>
-
-			<p id="timings">Completed in under a second, trying 1,000,000,000 combinations</p>
-			<p><b>Total cost:</b> <span id="level-cost">69</span> levels</p>
-
-			<h3>Steps</h3>
-			<ol id="steps">
-			</ol>
-		</div>
-
-		<div id="error" style="display: none">
-			<span class="lbl">Text here</span>
-		</div>
-
-	</div>
-
-	<br clear="all">
-</div>
-
-<div class="footer">
-	<p>Built by Cal Henderson. <a href="https://github.com/iamcal/enchant-order">Source on Github</a></p>
-</div>
-
 </body>
 </html>

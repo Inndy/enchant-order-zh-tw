@@ -1,0 +1,76 @@
+﻿const _translations = {
+    // Item types
+    "Helmet": "頭盔",
+    "Chestplate": "胸甲",
+    "Leggings": "護腿",
+    "Boots": "靴子",
+    "Turtle Shell": "海龜殼",
+    "Elytra": "鞘翅",
+    "Sword": "劍",
+    "Axe": "斧",
+    "Trident": "三叉戟",
+    "Pickaxe": "鎬",
+    "Shovel": "鏟",
+    "Hoe": "鋤",
+    "Bow": "弓",
+    "Shield": "盾牌",
+    "Crossbow": "弩",
+    "Fishing Rod": "釣竿",
+    "Shears": "剪刀",
+    "Flint & Steel": "打火石",
+    "Compass": "羅盤",
+    "Carrot on a Stick": "胡蘿蔔釣竿",
+    "Warped Fungus on a Stick": "扭曲蕈菇釣竿",
+
+    // Enchantment
+    "Aqua Affinity": "親水性",
+    "Bane of Arthropods": "節肢剋星",
+    "Blast Protection": "爆炸保護",
+    "Channeling": "喚雷",
+    "Binding Curse": "綁定詛咒",
+    "Vanishing Curse": "消失詛咒",
+    "Depth Strider": "深海漫遊",
+    "Efficiency": "效率",
+    "Feather Falling": "摔落緩衝",
+    "Fire Aspect": "燃燒",
+    "Fire Protection": "火焰保護",
+    "Flame": "火焰",
+    "Fortune": "幸運",
+    "Frost Walker": "冰霜行者",
+    "Impaling": "魚叉",
+    "Infinity": "無限",
+    "Knockback": "擊退",
+    "Looting": "掠奪",
+    "Loyalty": "忠誠",
+    "Luck of the Sea": "海洋的祝福",
+    "Lure": "魚餌",
+    "Mending": "修補",
+    "Multishot": "分裂箭矢",
+    "Piercing": "貫穿",
+    "Power": "強力",
+    "Projectile Protection": "投射物保護",
+    "Protection": "保護",
+    "Punch": "衝擊",
+    "Quick Charge": "快速上弦",
+    "Respiration": "水中呼吸",
+    "Riptide": "波濤",
+    "Sharpness": "鋒利",
+    "Silk Touch": "絲綢之觸",
+    "Smite": "不死剋星",
+    "Soul Speed": "靈魂疾走",
+    "Swift Sneak": "迅捷潛行",
+    "Sweeping Edge": "橫掃之刃 ",
+    "Thorns": "尖刺",
+    "Unbreaking": "耐久",
+
+    // UI
+    "Calculate": "計算",
+
+    // Messages
+    "Please select one or more enchantments": "請選擇至少一樣附魔",
+}
+function _t(text) {
+    if (_translations[text]) return _translations[text]
+    console.log(`no translation for "${text}"`)
+    return text
+}
